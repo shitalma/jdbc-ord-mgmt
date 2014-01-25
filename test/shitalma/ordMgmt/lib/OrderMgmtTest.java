@@ -112,16 +112,31 @@ public class OrderMgmtTest {
             assertEquals(productName[rs.getRow()-1] , rs.getString(2));
             assertEquals(unitPrice[rs.getRow()-1] , rs.getInt(3));
         }
-    }
 
-    @Test
-    public void testInsertRecordIntoCustomerTable() throws Exception{
-        String sql = "INSERT INTO ordMgmt.customer(cust_name ,address ,city ,state ,contact ) VALUES('Shital','3rd block','Kormangala','Karnataka',8123852388);";
-        int expected = 1;
-        int actual = stmt.executeUpdate(sql);
-        assertEquals(expected , actual);
-    }
+        String sql1 = "INSERT INTO ordMgmt.customer(cust_name ,address ,city ,state ,contact ) VALUES('Shital','3rd block','Kormangala','Karnataka',8123852388);";
+        assertEquals(1 , stmt.executeUpdate(sql1));
 
+        String inOrderInfo = "INSERT INTO ordMgmt.orderInfo(cust_id,date_of_order,delivery_date) VALUES(1,now(),now())";
+        assertEquals(1 , stmt.executeUpdate(inOrderInfo));
+
+        //Insert using select subquery
+
+        String inOrderItem = "INSERT INTO ordMgmt.orderItems(order_id,prod_id,quantity,item_price)VALUES((SELECT MAX(order_id) from ordMgmt.orderInfo where cust_id =1),(SELECT prod_id from ordMgmt.product where prod_name='Pen'),10,(SELECT 10*unit_price from ordMgmt.product where prod_name='Pen'))";
+        assertEquals(1,stmt.executeUpdate(inOrderItem));
+
+        // Selecting payment
+
+        String gettingPayment = "SELECT ordMgmt.orderItems.order_id,ordMgmt.customer.cust_name,ordMgmt.orderItems.item_price "+
+                "FROM ordMgmt.orderItems INNER JOIN ordMgmt.orderInfo INNER JOIN ordMgmt.customer "+
+                "ON ordMgmt.orderItems.order_id = ordMgmt.orderInfo.order_id AND ordMgmt.orderInfo.cust_id = ordMgmt.customer.cust_id WHERE ordMgmt.orderItems.order_id IN (SELECT MAX(order_id) from ordMgmt.orderItems)";
+        rs = stmt.executeQuery(gettingPayment);
+
+        while (rs.next()) {
+            assertEquals(1 , rs.getInt(1));
+            assertEquals("Shital",(rs.getString(2)));
+            assertEquals(100,rs.getInt(3));
+        }
+    }
     @After
     public void tearDown() throws Exception {
         try
