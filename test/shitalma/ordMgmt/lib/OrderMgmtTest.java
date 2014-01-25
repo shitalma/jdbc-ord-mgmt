@@ -5,12 +5,14 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
 import static junit.framework.Assert.assertEquals;
 
 public class OrderMgmtTest {
+
     final String DB_URL = "jdbc:mysql://localhost";
 
     final String USER = "shital";
@@ -87,12 +89,31 @@ public class OrderMgmtTest {
     }
 
     @Test
-    public void testInsertFirstRecordIntoProductTable() throws Exception{
-        String sql = "INSERT INTO ordMgmt.product(prod_name,unit_price) VALUES('Pen',10)";
-        int expected = 1;
-        int actual = stmt.executeUpdate(sql);
-        assertEquals(expected , actual);
+    public void testInsertAndSelectRecordsFromProductTable() throws Exception{
+        String firstRecord = "INSERT INTO ordMgmt.product(prod_name,unit_price) VALUES('Pen',10)";
+        assertEquals(1 , stmt.executeUpdate(firstRecord));
+
+        String secondRecord = "INSERT INTO ordMgmt.product(prod_name,unit_price) VALUES('NotebooK',30)";
+        assertEquals(1 , stmt.executeUpdate(secondRecord));
+
+        String thirdRecord = "INSERT INTO ordMgmt.product(prod_name,unit_price) VALUES('Pencil',3)";
+        assertEquals(1 , stmt.executeUpdate(thirdRecord));
+
+        String forthRecord = "INSERT INTO ordMgmt.product(prod_name,unit_price) VALUES('Water Colors',25)";
+        assertEquals(1 , stmt.executeUpdate(forthRecord));
+
+        String sql = "SELECT * from ordMgmt.product;";
+        ResultSet rs = stmt.executeQuery(sql);
+
+        String[] productName = {"Pen","NotebooK","Pencil","Water Colors"};
+        int[] unitPrice = {10,30,3,25};
+
+        while (rs.next()) {
+            assertEquals(productName[rs.getRow()-1] , rs.getString(2));
+            assertEquals(unitPrice[rs.getRow()-1] , rs.getInt(3));
+        }
     }
+
     @Test
     public void testInsertRecordIntoCustomerTable() throws Exception{
         String sql = "INSERT INTO ordMgmt.customer(cust_name ,address ,city ,state ,contact ) VALUES('Shital','3rd block','Kormangala','Karnataka',8123852388);";
