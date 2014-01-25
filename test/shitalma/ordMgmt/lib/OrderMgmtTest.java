@@ -1,7 +1,7 @@
 package shitalma.ordMgmt.lib;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.sql.DriverManager;
@@ -12,23 +12,23 @@ import java.sql.Statement;
 import static junit.framework.Assert.assertEquals;
 
 public class OrderMgmtTest {
+    static java.sql.Connection conn = null;
+    static Statement stmt = null;
 
-    final String DB_URL = "jdbc:mysql://localhost";
+    @BeforeClass
+    public static void createConnection() throws Exception {
+        final String DB_URL = "jdbc:mysql://localhost";
 
-    final String USER = "shital";
-    final String PASS = "nirankari";
+        final String USER = "shital";
+        final String PASS = "nirankari";
+        Class.forName("org.mariadb.jdbc.Driver");
+        conn = DriverManager.getConnection(DB_URL, USER, PASS);
+        stmt = conn.createStatement();
 
-    java.sql.Connection conn = null;
-    Statement stmt = null;
+        String sql = "CREATE SCHEMA ordMgmt";
+        assertEquals(1, stmt.executeUpdate(sql));
 
-    @Before
-    public void setUp() throws Exception {
         try{
-            Class.forName("org.mariadb.jdbc.Driver");
-            conn = DriverManager.getConnection(DB_URL, USER, PASS);
-            stmt = conn.createStatement();
-            String sql = "CREATE SCHEMA ordMgmt";
-            assertEquals(1, stmt.executeUpdate(sql));
 
             String createProductTable = "CREATE TABLE ordMgmt.product (\n" +
                     "\tprod_id INT PRIMARY KEY AUTO_INCREMENT,\n" +
@@ -86,10 +86,10 @@ public class OrderMgmtTest {
         } catch(Exception e){
             e.printStackTrace();
         }
-    }
 
+    }
     @Test
-    public void testInsertAndSelectRecordsFromProductTable() throws Exception{
+    public void testInsertRecordsIntoProductTable() throws Exception{
         String firstRecord = "INSERT INTO ordMgmt.product(prod_name,unit_price) VALUES('Pen',10)";
         assertEquals(1 , stmt.executeUpdate(firstRecord));
 
@@ -101,7 +101,10 @@ public class OrderMgmtTest {
 
         String forthRecord = "INSERT INTO ordMgmt.product(prod_name,unit_price) VALUES('Water Colors',25)";
         assertEquals(1 , stmt.executeUpdate(forthRecord));
+    }
 
+    @Test
+    public void testForSelectingRecordsFromProductTable() throws Exception{
         String sql = "SELECT * from ordMgmt.product;";
         ResultSet rs = stmt.executeQuery(sql);
 
@@ -112,21 +115,31 @@ public class OrderMgmtTest {
             assertEquals(productName[rs.getRow()-1] , rs.getString(2));
             assertEquals(unitPrice[rs.getRow()-1] , rs.getInt(3));
         }
-
+    }
+    @Test
+    public void testForInsertRecordIntoCustomerTable () throws  Exception {
         String sql1 = "INSERT INTO ordMgmt.customer(cust_name ,address ,city ,state ,contact ) VALUES('Shital','3rd block','Kormangala','Karnataka',8123852388);";
         assertEquals(1 , stmt.executeUpdate(sql1));
+    }
+
+    @Test
+    public void testForInsertingRecordIntoOrderInfoTable() throws Exception{
 
         String inOrderInfo = "INSERT INTO ordMgmt.orderInfo(cust_id,date_of_order,delivery_date) VALUES(1,now(),now())";
         assertEquals(1 , stmt.executeUpdate(inOrderInfo));
 
-        //Insert using select subquery
+    }
 
+    @Test
+    public void testForInsertingRecordIntoOrderItemsUsingSelectSubquery() throws Exception {
         String inOrderItem = "INSERT INTO ordMgmt.orderItems(order_id,prod_id,quantity,item_price)VALUES((SELECT MAX(order_id) from ordMgmt.orderInfo where cust_id =1),(SELECT prod_id from ordMgmt.product where prod_name='Pen'),10,(SELECT 10*unit_price from ordMgmt.product where prod_name='Pen'))";
         assertEquals(1,stmt.executeUpdate(inOrderItem));
+    }
 
-        // Selecting payment
-
-        String gettingPayment = "SELECT ordMgmt.orderItems.order_id,ordMgmt.customer.cust_name,ordMgmt.orderItems.item_price "+
+    @Test
+    public void testForGeneratingPaymentUsingSelectQuery() throws Exception {
+       ResultSet rs;
+       String gettingPayment = "SELECT ordMgmt.orderItems.order_id,ordMgmt.customer.cust_name,ordMgmt.orderItems.item_price "+
                 "FROM ordMgmt.orderItems INNER JOIN ordMgmt.orderInfo INNER JOIN ordMgmt.customer "+
                 "ON ordMgmt.orderItems.order_id = ordMgmt.orderInfo.order_id AND ordMgmt.orderInfo.cust_id = ordMgmt.customer.cust_id WHERE ordMgmt.orderItems.order_id IN (SELECT MAX(order_id) from ordMgmt.orderItems)";
         rs = stmt.executeQuery(gettingPayment);
@@ -137,8 +150,9 @@ public class OrderMgmtTest {
             assertEquals(100,rs.getInt(3));
         }
     }
-    @After
-    public void tearDown() throws Exception {
+
+    @AfterClass
+    public static void tearDown() throws Exception {
         try
         {
             String dropQuery = "DROP SCHEMA ordMgmt";
